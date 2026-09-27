@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!--
+    Layout of the downloadable resume PDF.
+    ResumePdfService fills it with Thymeleaf, then openhtmltopdf converts it to PDF.
+    openhtmltopdf supports CSS 2.1 (no flexbox/grid), so rows with text on the left and dates on the right use tables.
+    Lists are checked with #lists.isEmpty(...) rather than list.isEmpty(): Thymeleaf 3.1 blocks some method calls
+    on JDK-internal classes (like the lists List.of() returns) inside templates.
+-->
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${resume.name() != null ? resume.name() + ' - Resume' : 'Resume'}">Resume</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.5in 0.6in 0.5in 0.6in;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            color: #1b1f24;
+            margin: 0;
+        }
+        .name {
+            font-size: 21pt;
+            font-weight: bold;
+            text-align: center;
+            color: #10233f;
+            letter-spacing: 0.5pt;
+        }
+        .headline {
+            text-align: center;
+            font-size: 10.5pt;
+            color: #3b4a5e;
+            margin-top: 2pt;
+        }
+        .contact {
+            text-align: center;
+            font-size: 9pt;
+            color: #333333;
+            margin-top: 5pt;
+        }
+        .contact a {
+            color: #1a4f9c;
+            text-decoration: none;
+        }
+        .divider {
+            color: #9aa5b4;
+        }
+        .section {
+            margin-top: 10pt;
+        }
+        .section-title {
+            font-size: 10.5pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1pt;
+            color: #10233f;
+            border-bottom: 1pt solid #10233f;
+            padding-bottom: 1.5pt;
+            margin-bottom: 5pt;
+        }
+        .summary {
+            margin: 0;
+        }
+        .entry {
+            margin-bottom: 6pt;
+            page-break-inside: avoid;
+        }
+        table.entry-head {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.entry-head td {
+            padding: 0;
+            vertical-align: top;
+        }
+        .heading {
+            font-weight: bold;
+            font-size: 10.3pt;
+        }
+        .right {
+            text-align: right;
+            white-space: nowrap;
+            font-size: 9.3pt;
+            color: #333333;
+            padding-left: 10pt;
+        }
+        .sub {
+            font-style: italic;
+            font-size: 9.6pt;
+            color: #2b2f36;
+        }
+        ul {
+            margin: 2pt 0 0 0;
+            padding-left: 14pt;
+        }
+        li {
+            margin-bottom: 1.5pt;
+        }
+        .skill-row {
+            margin-bottom: 2.5pt;
+        }
+        .skill-label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="name" th:text="${resume.name() != null ? resume.name() : ''}">Name</div>
+<div class="headline" th:if="${resume.headline() != null}" th:text="${resume.headline()}">Headline</div>
+
+<div class="contact" th:if="${not #lists.isEmpty(contactParts)}">
+    <th:block th:each="part, iter : ${contactParts}">
+        <a th:if="${part.url() != null}" th:href="${part.url()}" th:text="${part.text()}">link</a>
+        <span th:if="${part.url() == null}" th:text="${part.text()}">text</span>
+        <span class="divider" th:if="${!iter.last}">&#160;|&#160;</span>
+    </th:block>
+</div>
+
+<div class="section" th:if="${resume.summary() != null}">
+    <div class="section-title">Summary</div>
+    <p class="summary" th:text="${resume.summary()}">Summary</p>
+</div>
+
+<div class="section" th:each="section : ${resume.sections()}">
+    <div class="section-title" th:text="${section.title()}">Section</div>
+
+    <!-- skills-style section: "Label: item, item, item" -->
+    <th:block th:if="${section.type() == 'skills'}">
+        <div class="skill-row" th:each="group : ${section.skillGroups()}">
+            <span class="skill-label" th:text="${group.label() + ':'}">Label:</span>
+            <span th:text="${#strings.listJoin(group.items(), ', ')}">items</span>
+        </div>
+    </th:block>
+
+    <!-- entries section: heading + dates, subheading + location, bullets -->
+    <th:block th:unless="${section.type() == 'skills'}">
+        <div class="entry" th:each="entry : ${section.entries()}">
+            <table class="entry-head">
+                <tr>
+                    <td class="heading" th:text="${entry.heading()}">Heading</td>
+                    <td class="right" th:text="${entry.dates()}">Dates</td>
+                </tr>
+                <tr th:if="${entry.subheading() != null or entry.location() != null}">
+                    <td class="sub" th:text="${entry.subheading()}">Subheading</td>
+                    <td class="right sub" th:text="${entry.location()}">Location</td>
+                </tr>
+            </table>
+            <ul th:if="${not #lists.isEmpty(entry.bullets())}">
+                <li th:each="bullet : ${entry.bullets()}" th:text="${bullet}">Bullet</li>
+            </ul>
+        </div>
+    </th:block>
+</div>
+
+</body>
+</html>
